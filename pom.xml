@@ -12,7 +12,7 @@
 	<artifactId>auth</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>auth</name>
-	<description>Building a user authentication and management api </description>
+	<description>Building a user authentication api </description>
 	<url/>
 	<licenses>
 		<license/>
