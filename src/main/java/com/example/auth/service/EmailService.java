@@ -19,7 +19,7 @@ public class EmailService {
         message.setTo(to);
         message.setSubject("OTP Verification");
         message.setText("Thank you for testing my project here's your opt" + " " + otp + " " + "\nWould appreciate your feedback.");
-        message.setFrom("shivrane2@gmail.com");
+        message.setFrom("yourmail@gmail.com");
 
         mailSender.send(message);
     }
