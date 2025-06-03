@@ -1,10 +1,12 @@
 package com.example.auth.service;
-import com.example.auth.model.LoginRequest;
+import com.example.auth.dto.LoginRequest;
+import com.example.auth.dto.RegisterRequest;
 import com.example.auth.model.OtpEntity;
 import com.example.auth.model.User;
 import com.example.auth.repository.OtpRepository;
 import com.example.auth.repository.UserRepository;
 
+import com.example.auth.security.JwtUtils;
 import jakarta.persistence.EntityNotFoundException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,24 +37,35 @@ public class UserService {
     @Autowired
     private OtpService otpService;
 
-    public User registerUser(@NotNull User user){
-        if(!validation.isEmailValid(user.getEmail())){
+    @Autowired
+    private JwtUtils jwtUtils;
+
+    public User registerUser(@NotNull RegisterRequest registerRequest){
+        System.out.println("Received email: " + registerRequest.getEmail());
+
+        if(!validation.isEmailValid(registerRequest.getEmail())){
+            System.out.println("Validating email: [" + registerRequest.getEmail() + "]");
             throw new IllegalArgumentException("Invalid email");
         }
-        if(!validation.isPassValid(user.getPassword())){
+        if(!validation.isPassValid(registerRequest.getPassword())){
             throw new IllegalArgumentException("Password is weak");
         }
-        if(userRepository.existsByEmail(user.getEmail())){
+        if(userRepository.existsByEmail(registerRequest.getEmail())){
            throw new EntityNotFoundException("Email already exists");
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        User user = new User();
+        user.setFirstname(registerRequest.getFirstname());
+        user.setLastname(registerRequest.getLastname());
+        user.setEmail(registerRequest.getEmail());
+        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
 
         return userRepository.save(user);
     }
 
     public boolean login(@NotNull LoginRequest loginRequest){
 
-        User user = userRepository.findByEmail(loginRequest.getEmail());
+        User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
        if(user == null){
            throw new EntityNotFoundException("Email doesn't exist");
        }
@@ -76,7 +89,7 @@ public class UserService {
         return true;
     }
 
-    public boolean verifyOtp(@NotNull String email, @NotNull  String otp){
+    public String verifyOtp(@NotNull String email, @NotNull  String otp){
 
         Optional<OtpEntity> otpEntityOpt = otpRepository.findByEmail(email);
         if(otpEntityOpt.isEmpty()){
@@ -95,13 +108,34 @@ public class UserService {
 
         otpRepository.delete(otpEntity);
 
-        return true;
+        return jwtUtils.generateToken(email);
     }
 
-    public void resetPassword(String currentPass,String newPass){
-
-    }
-
+//    public boolean resetPassword(@NotNull ResetPasswordDTO resetPasswordDTO){
+//        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+//        if(!resetPasswordDTO.equals(email)){
+//            throw new IllegalArgumentException("Password cannot be reset");
+//        }
+//        User user = userRepository.findByEmail(resetPasswordDTO.getEmail());
+//        if(user == null){
+//            throw new EntityNotFoundException("Email doesn't exist");
+//        }
+//
+//        String otp = otpService.generateOTP();
+//        LocalDateTime expiryTime = otpService.calculateExpiryTime(5);
+//        emailService.sendEmailforPassReset(resetPasswordDTO.getEmail(),otp);
+//        OtpEntity otpEntity = new OtpEntity();
+//        otpEntity.setEmail(resetPasswordDTO.getEmail());
+//        otpEntity.setOtp(otp);
+//        otpEntity.setExpiration_time(expiryTime);
+//        otpRepository.save(otpEntity);
+//
+//        return true;
+//    }
+//
+//    public void VerifyOTPForPassReset(String email, String otp){
+//
+//    }
     public void deleteUser(Integer id){
         if(userRepository.existsById(id)){
             userRepository.deleteById(id);

@@ -1,39 +1,14 @@
-package com.example.auth.model;
+package com.example.auth.dto;
 
-import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 
+public class RegisterRequest {
 
-@Entity
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
     private String firstname;
     private String lastname;
-    @Column(unique = true)
+    @Email
     private String email;
     private String password;
-
-    public User(){
-    }
-
-
-    public User(Integer id, String firstname,String lastname, String email, String password) {
-        this.id = id;
-        this.firstname = firstname;
-        this.lastname = lastname;
-        this.email = email;
-        this.password = password;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
 
     public String getFirstname() {
         return firstname;

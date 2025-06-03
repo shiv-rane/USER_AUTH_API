@@ -1,12 +1,20 @@
 package com.example.auth.controller;
 
-import com.example.auth.model.LoginRequest;
+import com.example.auth.dto.LoginRequest;
+import com.example.auth.dto.RegisterRequest;
+import com.example.auth.dto.ResetPasswordDTO;
 import com.example.auth.model.User;
 import com.example.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/user")
@@ -15,11 +23,16 @@ public class UserController {
     @Autowired
     private UserService service;
 
-    
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public User registerUser(@RequestBody User user){
-        return service.registerUser(user);
+    public User registerUser(@RequestBody RegisterRequest request){
+        return service.registerUser(request);
+    }
+
+    @GetMapping("/me")
+    public String hello(){
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return email;
     }
 
     @DeleteMapping("/delete/{id}")
@@ -40,13 +53,26 @@ public class UserController {
     }
 
     @GetMapping("/verify-otp")
-    public ResponseEntity<String> verifyOtp(@RequestParam String email, @RequestParam String otp){
-        boolean verify = service.verifyOtp(email,otp);
-        if(verify){
-            return ResponseEntity.ok("Otp has been verified");
-        }
-        else{
-            return ResponseEntity.status(400).body("Invalid Otp");
-        }
+    public ResponseEntity<Map<String , String>> verifyOtp(@RequestParam String email, @RequestParam String otp){
+        Map<String , String> response = new HashMap<>();
+        String token = service.verifyOtp(email,otp);
+        ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(3600)
+                .sameSite("Strict")
+                .build();
+        response.put("message", "OTP verified successfully");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
     }
+
+//    @PostMapping("/reset-password")
+//    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO resetpasswordDTO){
+//        boolean reset = service.resetPassword(resetpasswordDTO);
+//        return ResponseEntity.ok("OTP sent to your email");
+//    }
 }

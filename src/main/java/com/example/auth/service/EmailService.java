@@ -23,5 +23,16 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void sendEmailforPassReset(String to,String otp) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Reset Password");
+        message.setText("Thank you for testing my project here's your opt" + " " + otp + " " + "\nWould appreciate your feedback.");
+        message.setFrom("shivrane2@gmail.com");
+
+        mailSender.send(message);
+    }
 }
 
