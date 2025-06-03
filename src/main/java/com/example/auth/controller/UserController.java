@@ -1,9 +1,11 @@
 package com.example.auth.controller;
 
 import com.example.auth.dto.LoginRequest;
+import com.example.auth.dto.OtpVerificationDTO;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.dto.ResetPasswordDTO;
 import com.example.auth.model.User;
+import com.example.auth.service.OtpRateLimiter;
 import com.example.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +24,9 @@ public class UserController {
 
     @Autowired
     private UserService service;
+
+    @Autowired
+    private OtpRateLimiter otpRateLimiter;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -43,8 +48,16 @@ public class UserController {
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest){
+
+        if (!otpRateLimiter.canRequestOtp(loginRequest.getEmail())) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("Too many OTP requests. Try again later.");
+        }
+
         boolean isAuthenticate = service.login(loginRequest);
+
         if(isAuthenticate){
+            otpRateLimiter.recordOtpRequest(loginRequest.getEmail());
             return ResponseEntity.ok("OTP sent to your registered email");
         }
         else {
@@ -52,10 +65,16 @@ public class UserController {
         }
     }
 
-    @GetMapping("/verify-otp")
-    public ResponseEntity<Map<String , String>> verifyOtp(@RequestParam String email, @RequestParam String otp){
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpVerificationDTO otpVerificationDTO){
         Map<String , String> response = new HashMap<>();
-        String token = service.verifyOtp(email,otp);
+
+        if (otpRateLimiter.isVerificationBlocked(otpVerificationDTO.getEmail())) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("Too many failed attempts. Try after some time.");
+        }
+
+        String token = service.verifyOtp(otpVerificationDTO.getEmail(), otpVerificationDTO.getOtp());
         ResponseCookie cookie = ResponseCookie.from("jwt", token)
                 .httpOnly(true)
                 .secure(false)

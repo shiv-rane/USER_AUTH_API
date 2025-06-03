@@ -10,6 +10,8 @@ import com.example.auth.security.JwtUtils;
 import jakarta.persistence.EntityNotFoundException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +41,9 @@ public class UserService {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private OtpRateLimiter otpRateLimiter;
 
     public User registerUser(@NotNull RegisterRequest registerRequest){
         System.out.println("Received email: " + registerRequest.getEmail());
@@ -103,11 +108,13 @@ public class UserService {
         }
 
         if(!otpEntity.getOtp().equals(otp)){
+            otpRateLimiter.recordFailedVerification(email);
+            otpRepository.delete(otpEntity);
             throw new IllegalThreadStateException("Invalid otp");
         }
 
         otpRepository.delete(otpEntity);
-
+        otpRateLimiter.resetVerificationAttempts(email);
         return jwtUtils.generateToken(email);
     }
 
